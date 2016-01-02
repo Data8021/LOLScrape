@@ -6,14 +6,14 @@ library(dplyr)
 ## Load worlds schedule
 load("scheduleGames.Rda")
 
-# ## Filter for unique tournamentID/matchID
-# matchList <- distinct(select(games, tournamentID, matchID))
-# 
-# ## Filter for games played
-# gamesPlayed <- filter(games, gameRealm != "NA")
-# 
-# ## Intialize df for gameID/gameHash
-# gameHashDF <- data.frame(id=character(), gameHash=character()) 
+## Filter for unique tournamentID/matchID
+matchList <- distinct(select(games, tournamentID, matchID))
+
+## Filter for games played
+gamesPlayed <- filter(games, gameRealm != "NA")
+
+## Intialize df for gameID/gameHash
+gameHashDF <- data.frame(id=character(), gameHash=character()) 
 # 
 # ## Loop through each match
 # for (i in 1:nrow(matchList)) {
