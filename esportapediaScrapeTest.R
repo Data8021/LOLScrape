@@ -1,6 +1,12 @@
 library(XML)
 library(rvest)
 
+## Read in list of tournament match pages and links
+tournamentMH <- read.csv("tournamentMatch.csv", stringsAsFactors = FALSE)
+
+
+
+## MH Page Scrape
 u <- "http://lol.esportspedia.com/wiki/2015_EU_Challenger_Series/Summer_Playoffs/Match_History"
 
 matchSession <- read_html(u)
