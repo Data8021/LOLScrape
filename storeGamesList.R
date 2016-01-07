@@ -32,13 +32,10 @@ for (i in 1:8) {
       tournamentID <- minimizedList[[i]][["highlanderTournaments"]][[k, "id"]]      
 
       ## Subset brackets
-      bracketsList <- as.list(minimizedList[[i]][["highlanderTournaments"]][["brackets"]])
+      bracketsList <- as.list(minimizedList[[i]][["highlanderTournaments"]][[k, "brackets"]])
 
-      ## Loop through each bracket to extract game information
-      for (l in 1:length(bracketsList)) {
-        
-        ## Store bracketID
-        bracketID <- names(bracketsList[l])
+      ## Store bracketID
+      bracketID <- bracketsList[1]
         
         ## extract matches
         matchesList <- as.list(bracketsList[[l]][["matches"]])
@@ -99,7 +96,7 @@ for (i in 1:8) {
           }
           
           
-        }
+        
         
         
       }

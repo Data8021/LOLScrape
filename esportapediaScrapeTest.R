@@ -1,10 +1,13 @@
-library(XML)
 library(rvest)
 library(dplyr)
-library(lubridate)
+library(tcltk)
+
 
 ## Read in list of tournament match pages and links
 tournamentMH <- read.csv("tournamentMatch.csv", stringsAsFactors = FALSE)
+
+## Remove tournaments with mostly missing information
+tournamentMH <- tournamentMH[-12,]
 
 ## Initialize df for tournament data
 tournamentData <- data.frame(matrix(ncol=34, nrow=0))
@@ -18,6 +21,12 @@ colnames(tournamentData) <- c("tournamentName", "date", "blueTeam", "redTeam",
                                 "redTowers", "redDragons", "redBarons", "sbLink",
                                 "mhLink")
 
+
+
+## Initialize progress bar
+pb <- tkProgressBar(title = "Progress Bar", min = 0,
+                    max = nrow(tournamentMH), width = 300)
+
 ## Loop through links in tournamentMH
 for (i in 1:nrow(tournamentMH)) {
         
@@ -28,9 +37,21 @@ for (i in 1:nrow(tournamentMH)) {
     ## Read in the webpage
     tournSession <- read_html(u)
     
+    ## Determine which table # is correct
+    for (j in 1:10) {
+      
+      dateTest <- tournSession %>%
+        html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",j,"]/tr[1]/th[1]")) %>%
+        html_text()
+      
+      if ((length(dateTest) != 0) && (dateTest == " Date ")) {
+        tableNum <- j
+      }
+    }
+    
     ## render whole table to get size
     fullTable <- tournSession %>%
-      html_nodes(xpath="/html/body/div[3]/div[3]/div[4]/table[4]") %>%
+      html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]")) %>%
         html_table()
     fullTable <- fullTable[[1]]
     
@@ -64,37 +85,39 @@ for (i in 1:nrow(tournamentMH)) {
         
         ## Game date        
         tempDF[l, 2] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[1]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[1]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.Date()
         
         ## Team names
         blueTeam <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[3]/a")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[3]/a")) %>%
           html_attr("title")
         tempDF[l, 3] <- blueTeam
         
         redTeam <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[4]/a")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[4]/a")) %>%
           html_attr("title")
         tempDF[l, 4] <- redTeam
         
         ## Determine winner's color
         winner <- tournSession %>%
-            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]")) %>%
+            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]")) %>%
             html_attr("style")
         
         ## Determine winner
         if (winner == "background-color:#9bd6ff") {
           tempDF[l, 5] <- blueTeam 
         } else {
-          tempDF[l, 5] <- redTeam
+          if (winner == "background-color:#ffcccc") {
+            tempDF[l, 5] <- redTeam
+          }
         }
         
         ## Determine if blue banned
         banTest <- tournSession %>%
-                 html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[5]/a[1]")) %>%
+                 html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[5]/a[1]")) %>%
                  html_attr("title")
 
         if (length(banTest)!=0L) {
@@ -104,7 +127,7 @@ for (i in 1:nrow(tournamentMH)) {
         }
         
         banTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[5]/a[2]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[5]/a[2]")) %>%
           html_attr("title")
         
         if (length(banTest)!=0L) {
@@ -114,7 +137,7 @@ for (i in 1:nrow(tournamentMH)) {
         }
         
         banTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[5]/a[3]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[5]/a[3]")) %>%
           html_attr("title")
         
         if (length(banTest)!=0L) {
@@ -125,7 +148,7 @@ for (i in 1:nrow(tournamentMH)) {
         
         ## Determine if red banned
         banTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[6]/a[1]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[6]/a[1]")) %>%
           html_attr("title")
         
         if (length(banTest)!=0L) {
@@ -135,7 +158,7 @@ for (i in 1:nrow(tournamentMH)) {
         }
         
         banTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[6]/a[2]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[6]/a[2]")) %>%
           html_attr("title")
         
         if (length(banTest)!=0L) {
@@ -145,7 +168,7 @@ for (i in 1:nrow(tournamentMH)) {
         }
         
         banTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[6]/a[3]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[6]/a[3]")) %>%
           html_attr("title")
         
         if (length(banTest)!=0L) {
@@ -156,137 +179,141 @@ for (i in 1:nrow(tournamentMH)) {
         
         ## Blue picks
         tempDF[l, 12] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[7]/a[1]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[7]/a[1]")) %>%
           html_attr("title")
         
         tempDF[l, 13] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[7]/a[2]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[7]/a[2]")) %>%
           html_attr("title")  
         
         tempDF[l, 14] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[7]/a[3]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[7]/a[3]")) %>%
           html_attr("title")  
         
         tempDF[l, 15] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[7]/a[4]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[7]/a[4]")) %>%
           html_attr("title")  
         
         tempDF[l, 16] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[7]/a[5]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[7]/a[5]")) %>%
           html_attr("title")  
         
         ## Red picks
         tempDF[l, 17] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[8]/a[1]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[8]/a[1]")) %>%
           html_attr("title")  
         
         tempDF[l, 18] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[8]/a[2]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[8]/a[2]")) %>%
           html_attr("title")  
         
         tempDF[l, 19] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[8]/a[3]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[8]/a[3]")) %>%
           html_attr("title")  
         
         tempDF[l, 20] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[8]/a[4]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[8]/a[4]")) %>%
           html_attr("title")  
         
         tempDF[l, 21] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[8]/a[5]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[8]/a[5]")) %>%
           html_attr("title")  
         
         ## Game length
         temp <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[9]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[9]")) %>%
           html_text() %>%
           gsub('[\n]', '', .)
-        tempDF[l, 22] <- toSeconds(temp)
+          
+          ## Convert ot seconds and assign, if exists
+          if (temp != "") {
+              tempDF[l, 22] <- toSeconds(temp)
+          }
         
         ## Blue gold/kills/towers/dragons/barons
         tempDF[l, 23] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[10]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[10]")) %>%
           html_text() %>%
           gsub('[\n]', '', .)
         
         tempDF[l, 24] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[11]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[11]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 25] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[12]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[12]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 26] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[13]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[13]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 27] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[14]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[14]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
 
         ## Red gold/kills/towers/dragons/barons
         tempDF[l, 28] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[15]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[15]")) %>%
           html_text() %>%
           gsub('[\n]', '', .)
         
         tempDF[l, 29] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[16]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[16]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 30] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[17]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[17]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 31] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[18]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[18]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         tempDF[l, 32] <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[19]")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[19]")) %>%
           html_text() %>%
           gsub('[\n]', '', .) %>%
           as.numeric()
         
         ## Determine if scoreboard link exists
         linkTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[20]/a")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[20]/a")) %>%
           html_attr("href")
         
         if (length(linkTest)!=0L) {
           
           ## Scoreboard link
           tempDF[l, 33] <- tournSession %>%
-            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[20]/a")) %>%
+            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[20]/a")) %>%
             html_attr("href")  
         
         }
         
         ## Determine if match history link exists
         linkTest <- tournSession %>%
-          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[21]/a")) %>%
+          html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[21]/a")) %>%
           html_attr("href")
         
         if (length(linkTest)!=0L) {
           
           ## Scoreboard link
           tempDF[l, 34] <- tournSession %>%
-            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[4]/tr[",l+1,"]/td[21]/a")) %>%
+            html_nodes(xpath=paste0("/html/body/div[3]/div[3]/div[4]/table[",tableNum,"]/tr[",l+1,"]/td[21]/a")) %>%
             html_attr("href")  
           
         }
@@ -298,5 +325,14 @@ for (i in 1:nrow(tournamentMH)) {
     ## bind the new games into the tournament DF
     tournamentData <- rbind(tournamentData, tempDF)  
     
-
+    ## Update progress bar
+    Sys.sleep(0.1)
+    setTkProgressBar(pb, i, label=paste( round(i/(nrow(tournamentMH))*100, 0),
+                                         "% complete"))
+    
 }
+## Close progress bar
+close(pb)
+
+## Save output
+save(tournamentData, file="lolesportapediaMH.Rda")
