@@ -131,7 +131,7 @@ matchList <- distinct(select(gamesPlayed, tournamentID, matchID))
 rm(i, tempJSON, matchList)
 
 ## Join gameHashDF and gamesPlayed by gameID
-gamesPlayed <- left_join(gamesPlayed, gameHashDF,
+gamesPlayed <- left_join(gamesPlayed, tempMatchDF,
                          by = c("gameID" = "gameID"))
 
 ## Remove some variables
