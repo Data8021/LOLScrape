@@ -1,6 +1,8 @@
 library(rvest)
 library(dplyr)
-library(tcltk)
+library(BDWPkg)
+
+## Load string splitting function
 
 
 ## Read in list of tournament match pages and links
@@ -23,9 +25,6 @@ colnames(tournamentData) <- c("tournamentName", "date", "blueTeam", "redTeam",
 
 
 
-## Initialize progress bar
-pb <- tkProgressBar(title = "Progress Bar", min = 0,
-                    max = nrow(tournamentMH), width = 300)
 
 ## Loop through links in tournamentMH
 for (i in 1:nrow(tournamentMH)) {
@@ -325,14 +324,42 @@ for (i in 1:nrow(tournamentMH)) {
     ## bind the new games into the tournament DF
     tournamentData <- rbind(tournamentData, tempDF)  
     
-    ## Update progress bar
-    Sys.sleep(0.1)
-    setTkProgressBar(pb, i, label=paste( round(i/(nrow(tournamentMH))*100, 0),
-                                         "% complete"))
-    
 }
-## Close progress bar
-close(pb)
 
 ## Save output
 save(tournamentData, file="lolesportapediaMH.Rda")
+
+## Strip out missing match history links
+matchHistoryLinks <- tournamentData[!is.na(tournamentData$mhLink),]
+
+## Strip non-match history links
+matchHistoryLinks <- matchHistoryLinks[grep("matchhistory.na.leagueoflegends.com", matchHistoryLinks$mhLink), ]
+
+## Decompose match history link into key elements
+matchHistoryLinks <- mutate(matchHistoryLinks,
+      gameRealm=sapply(strsplit(matchHistoryLinks$mhLink,
+        split="/", fixed=TRUE),function(x) (x[6])))
+
+matchHistoryLinks <- mutate(matchHistoryLinks,
+      gameCode=sapply(strsplit(matchHistoryLinks$mhLink,
+        split="/", fixed=TRUE),
+        function(x) {strsplit(x[[1]][7], split="//?", fixed=TRUE)[[1]][1]}))
+
+matchHistoryLinks <- mutate(matchHistoryLinks,
+      gameCode=sapply(strsplit(strsplit(matchHistoryLinks$mhLink, "/")[[1]][7], "\\?"),
+       function(x) (x[[1]][1])))
+
+# matchHistoryLinks$gameRealm <- strsplit(matchHistoryLinks$mhLink, "/")[[1]][6]
+# 
+# for (i in 1:nrow(matchHistoryLinks)) {
+#   
+#   strsplit(strsplit(matchHistoryLinks[1, 34], "/")[[1]][7], "\\?")[[1]][1]
+#   
+# }
+# 
+# decompMatch <- function(df){
+#   df$gameRealm <- strsplit(df$mhLink, "/")[[1]][6]
+#   codeHash <- strsplit(df$mhLink, "/")[[1]][7]
+#   df$gameCode <- strsplit(codeHash, "\\?")[[1]][1]
+#   
+# }
