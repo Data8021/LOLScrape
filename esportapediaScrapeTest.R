@@ -337,28 +337,21 @@ matchHistoryLinks <- matchHistoryLinks[grep("matchhistory.na.leagueoflegends.com
 
 ## Decompose match history link into key elements
 matchHistoryLinks <- mutate(matchHistoryLinks,
-      gameRealm=sapply(strsplit(matchHistoryLinks$mhLink,
-        split="/", fixed=TRUE),function(x) (x[6])))
+      gameRealm=sapply(matchHistoryLinks$mhLink,
+            function(x) (strsplit(x, split="/", fixed=TRUE)[[1]][6])))
 
 matchHistoryLinks <- mutate(matchHistoryLinks,
-      gameHash=sapply(strsplit(matchHistoryLinks$mhLink,
-        split="/", fixed=TRUE),function(x) (x[7])))
+      gameCode=sapply(matchHistoryLinks$mhLink,
+            function(x) (strsplit(strsplit(x, split="/", fixed=TRUE)[[1]][7], split="\\?")[[1]][1])))
 
 matchHistoryLinks <- mutate(matchHistoryLinks,
-      gameCode=sapply(strsplit(matchHistoryLinks$gameHash,
-        split="\\?", fixed=TRUE),function(x) (x[[1]][1])))
+      gameHash=sapply(matchHistoryLinks$mhLink,
+                      function(x) {
+                          x <- strsplit(x, split="/", fixed=TRUE)[[1]][7]
+                          x <- strsplit(x, split="\\?")[[1]][2]
+                          x <- gsub("^.*?=","",x)
+                          x <- gsub("\\&.*","",x)    
+                      }))
 
-# matchHistoryLinks$gameRealm <- strsplit(matchHistoryLinks$mhLink, "/")[[1]][6]
-# 
-# for (i in 1:nrow(matchHistoryLinks)) {
-#   
-#   strsplit(strsplit(matchHistoryLinks[1, 34], "/")[[1]][7], "\\?")[[1]][1]
-#   
-# }
-# 
-# decompMatch <- function(df){
-#   df$gameRealm <- strsplit(df$mhLink, "/")[[1]][6]
-#   codeHash <- strsplit(matchHistoryLinks[1, 34], "/")[[1]][7]
-#   df$gameCode <- strsplit(codeHash, "\\?")[[1]][1]
-#   
-# }
+## Save output
+save(matchHistoryLinks, file="esportapediaMHLinks.Rda")
