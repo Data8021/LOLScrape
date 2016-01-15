@@ -341,13 +341,12 @@ matchHistoryLinks <- mutate(matchHistoryLinks,
         split="/", fixed=TRUE),function(x) (x[6])))
 
 matchHistoryLinks <- mutate(matchHistoryLinks,
-      gameCode=sapply(strsplit(matchHistoryLinks$mhLink,
-        split="/", fixed=TRUE),
-        function(x) {strsplit(x[[1]][7], split="//?", fixed=TRUE)[[1]][1]}))
+      gameHash=sapply(strsplit(matchHistoryLinks$mhLink,
+        split="/", fixed=TRUE),function(x) (x[7])))
 
 matchHistoryLinks <- mutate(matchHistoryLinks,
-      gameCode=sapply(strsplit(strsplit(matchHistoryLinks$mhLink, "/")[[1]][7], "\\?"),
-       function(x) (x[[1]][1])))
+      gameCode=sapply(strsplit(matchHistoryLinks$gameHash,
+        split="\\?", fixed=TRUE),function(x) (x[[1]][1])))
 
 # matchHistoryLinks$gameRealm <- strsplit(matchHistoryLinks$mhLink, "/")[[1]][6]
 # 
@@ -359,7 +358,7 @@ matchHistoryLinks <- mutate(matchHistoryLinks,
 # 
 # decompMatch <- function(df){
 #   df$gameRealm <- strsplit(df$mhLink, "/")[[1]][6]
-#   codeHash <- strsplit(df$mhLink, "/")[[1]][7]
+#   codeHash <- strsplit(matchHistoryLinks[1, 34], "/")[[1]][7]
 #   df$gameCode <- strsplit(codeHash, "\\?")[[1]][1]
 #   
 # }
