@@ -16,3 +16,22 @@ toSeconds <- function(x){
     )  
   )  
 } 
+
+fromSeconds <- function(x){
+  if (!is.numeric(x)) stop("x must be numeric")
+  if (length(x)<=0)return(x)
+  
+  unlist(
+    lapply(x,
+           function(i){
+             if (i >= 3600) {
+               y <- seconds_to_period(i)
+               sprintf('%02d:%02d:%02d', y@hour, minute(y), second(y))
+             } else {
+               y <- seconds_to_period(i)
+               sprintf('%02d:%02d', minute(y), second(y))
+             }
+           }  
+    )  
+  )  
+} 

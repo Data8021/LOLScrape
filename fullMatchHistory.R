@@ -1,27 +1,38 @@
 library(jsonlite)
 library(dplyr)
-## 4th Scraper, run after fullGamesList.R
+## 4th Scraper, run after fullGamesList.R and esportapediaMHScrape.R
 
 ## Load files
-save(gamesPlayed, file="gamesPlayed.Rda")
-save(playerDF, file="playerDF.Rda")
+load("gamesPlayed.Rda")
+load("esportapediaMHLinks.Rda")
+
+## Downselect to variables needed to pull game files
+mhLinks <- select(matchHistoryLinks, gameRealm, gameCode, gameHash)
+gmPlay <- select(gamesPlayed, gameRealm, gameCode, gameHash)
+
+## Integrate into single df/remove stray attributes
+consMH <- rbind(mhLinks, gmPlay)
+attributes(consMH$gameRealm) <- NULL
+attributes(consMH$gameCode) <- NULL
+attributes(consMH$gameHash) <- NULL
+
+## Remove duplicates
+consMH <- distinct(consMH)
 
 ## Initialize list to hold games
-gamesListNames <- gamesPlayed$gameHash
+gamesListNames <- consMH$gameHash
 fullGameList <- vector("list", length(gamesListNames))
 names(fullGameList) <- gamesListNames
 rm(gamesListNames)
 
 ## Loop through game to download the game stats
-for (i in 1:nrow(gamesPlayed)) {
+for (i in 1:nrow(consMH)) {
     
     fullGameList[[i]] <- fromJSON(paste0("https://acs.leagueoflegends.com/v1/stats/game/",
-                                           gamesPlayed[i, "gameRealm"], "/", gamesPlayed[i, "gameCode"], "?gameHash=", 
-                                           gamesPlayed[i, "gameHash"]))
+                                           consMH[i, "gameRealm"], "/", consMH[i, "gameCode"], "?gameHash=", 
+                                           consMH[i, "gameHash"]))
     print(i)
-    
-    
 }
 
 ## Save raw game files
-save(worldsGameList, file="Worlds2015Games.Rda")
+save(fullGameList, file="fullGameList.Rda")
