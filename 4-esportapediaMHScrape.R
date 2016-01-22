@@ -1,8 +1,7 @@
 library(rvest)
 library(dplyr)
 library(BDWPkg)
-
-## Load string splitting function
+## 4th Scraper, run after fullGamesList.R, although it is independent. 
 
 
 ## Read in list of tournament match pages and links

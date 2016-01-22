@@ -1,6 +1,6 @@
 library(jsonlite)
 library(dplyr)
-## 4th Scraper, run after fullGamesList.R and esportapediaMHScrape.R
+## 5th Scraper, run after esportapediaMHScrape.R
 
 ## Load files
 load("gamesPlayed.Rda")
